@@ -23,9 +23,10 @@ export interface MouseMovementEvent {
   x: number;
   y: number;
   timestamp: number;
-  type: 'move' | 'click' | 'scroll';
+  type: 'move' | 'left_press' | 'left_release' | 'right_press' | 'right_release' | 'scroll_up' | 'scroll_down';
   velocity?: number;
   acceleration?: number;
+  distance?: number;
 }
 
 export interface TouchEvent {
@@ -47,18 +48,16 @@ export interface TimingData {
 }
 
 export interface BehavioralFeatures {
-  avgKeystrokeDwell: number;
-  avgKeystrokeFlight: number;
+  // Research-based optimal features
+  meanKeystrokeDwell: number;
+  meanFlightTime: number;
+  meanMouseTrajectory: number;
+  // Additional features for enhanced accuracy
   keystrokeRhythm: number;
-  mouseVelocityMean: number;
-  mouseVelocityStd: number;
-  mouseAcceleration: number;
   typingSpeed: number;
-  pauseFrequency: number;
   backspaceRate: number;
-  totalFormTime: number;
+  mousePauseCount: number;
   touchPressureMean?: number;
-  touchSizeMean?: number;
 }
 
 export class BehavioralCollector {
@@ -67,12 +66,16 @@ export class BehavioralCollector {
   private touchEvents: TouchEvent[] = [];
   private startTime: number = 0;
   private lastKeyTime: number = 0;
+  private lastMouseTime: number = 0;
   private backspaceCount: number = 0;
   private pauseCount: number = 0;
   private totalPauseTime: number = 0;
+  private mousePauseCount: number = 0;
+  private totalMouseDistance: number = 0;
 
   constructor() {
     this.startTime = Date.now();
+    this.lastMouseTime = Date.now();
   }
 
   recordKeystroke(key: string, keyDown: number, keyUp: number, pressure?: number) {
@@ -101,20 +104,29 @@ export class BehavioralCollector {
     this.lastKeyTime = keyUp;
   }
 
-  recordMouseMovement(x: number, y: number, type: 'move' | 'click' | 'scroll') {
+  recordMouseMovement(x: number, y: number, type: 'move' | 'left_press' | 'left_release' | 'right_press' | 'right_release' | 'scroll_up' | 'scroll_down') {
     const timestamp = Date.now();
-    let velocity, acceleration;
+    let velocity, acceleration, distance = 0;
 
-    if (this.mouseEvents.length > 0 && type === 'move') {
+    if (this.mouseEvents.length > 0) {
       const lastEvent = this.mouseEvents[this.mouseEvents.length - 1];
-      const distance = Math.sqrt(Math.pow(x - lastEvent.x, 2) + Math.pow(y - lastEvent.y, 2));
+      distance = Math.sqrt(Math.pow(x - lastEvent.x, 2) + Math.pow(y - lastEvent.y, 2));
       const timeDiff = timestamp - lastEvent.timestamp;
-      velocity = distance / timeDiff;
+      
+      // Track mouse pauses > 500ms (research-based)
+      if (timeDiff > 500) {
+        this.mousePauseCount++;
+      }
+      
+      if (type === 'move') {
+        velocity = distance / timeDiff;
+        this.totalMouseDistance += distance;
 
-      if (this.mouseEvents.length > 1) {
-        const prevEvent = this.mouseEvents[this.mouseEvents.length - 2];
-        const prevVelocity = lastEvent.velocity || 0;
-        acceleration = (velocity - prevVelocity) / timeDiff;
+        if (this.mouseEvents.length > 1) {
+          const prevEvent = this.mouseEvents[this.mouseEvents.length - 2];
+          const prevVelocity = lastEvent.velocity || 0;
+          acceleration = (velocity - prevVelocity) / timeDiff;
+        }
       }
     }
 
@@ -124,7 +136,8 @@ export class BehavioralCollector {
       timestamp,
       type,
       velocity,
-      acceleration
+      acceleration,
+      distance
     });
   }
 
@@ -182,24 +195,32 @@ export class NaiveBayesAuthenticator {
   extractFeatures(data: BehavioralData): BehavioralFeatures {
     const keystrokeDwells = data.keystrokeDynamics.map(k => k.dwellTime);
     const keystrokeFlights = data.keystrokeDynamics.filter(k => k.flightTime).map(k => k.flightTime!);
-    const mouseVelocities = data.mouseMovements.filter(m => m.velocity).map(m => m.velocity!);
-    const mouseAccelerations = data.mouseMovements.filter(m => m.acceleration).map(m => m.acceleration!);
     const touchPressures = data.touchEvents.map(t => t.pressure);
-    const touchSizes = data.touchEvents.map(t => t.size);
+    
+    // Research-based mouse trajectory calculation: total distance / pauses > 500ms
+    const mouseDistances = data.mouseMovements.filter(m => m.distance && m.distance > 0).map(m => m.distance!);
+    const totalDistance = mouseDistances.reduce((sum, d) => sum + d, 0);
+    
+    // Count mouse pauses > 500ms from mouse movement data
+    let mousePauseCount = 0;
+    for (let i = 1; i < data.mouseMovements.length; i++) {
+      const timeDiff = data.mouseMovements[i].timestamp - data.mouseMovements[i-1].timestamp;
+      if (timeDiff > 500) mousePauseCount++;
+    }
+    
+    const mouseTrajectory = mousePauseCount > 0 ? totalDistance / mousePauseCount : totalDistance;
 
     return {
-      avgKeystrokeDwell: this.calculateMean(keystrokeDwells),
-      avgKeystrokeFlight: this.calculateMean(keystrokeFlights),
+      // Research-based optimal features
+      meanKeystrokeDwell: this.calculateMean(keystrokeDwells),
+      meanFlightTime: this.calculateMean(keystrokeFlights),
+      meanMouseTrajectory: mouseTrajectory,
+      // Additional features for enhanced accuracy
       keystrokeRhythm: this.calculateStandardDeviation(keystrokeFlights),
-      mouseVelocityMean: this.calculateMean(mouseVelocities),
-      mouseVelocityStd: this.calculateStandardDeviation(mouseVelocities),
-      mouseAcceleration: this.calculateMean(mouseAccelerations),
       typingSpeed: data.timingData.typingSpeed,
-      pauseFrequency: data.timingData.pauseCount / (data.timingData.totalTime / 60000),
-      backspaceRate: data.timingData.backspaceCount / data.keystrokeDynamics.length,
-      totalFormTime: data.timingData.totalTime,
-      touchPressureMean: touchPressures.length > 0 ? this.calculateMean(touchPressures) : undefined,
-      touchSizeMean: touchSizes.length > 0 ? this.calculateMean(touchSizes) : undefined
+      backspaceRate: data.timingData.backspaceCount / Math.max(1, data.keystrokeDynamics.length),
+      mousePauseCount: mousePauseCount,
+      touchPressureMean: touchPressures.length > 0 ? this.calculateMean(touchPressures) : undefined
     };
   }
 

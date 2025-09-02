@@ -55,16 +55,28 @@ export const BehavioralForm: React.FC<BehavioralFormProps> = ({
       collector.recordMouseMovement(x, y, 'move');
     };
 
-    const handleMouseClick = (e: MouseEvent) => {
+    const handleMouseDown = (e: MouseEvent) => {
       const rect = form.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
-      collector.recordMouseMovement(x, y, 'click');
+      const eventType = e.button === 0 ? 'left_press' : 'right_press';
+      collector.recordMouseMovement(x, y, eventType);
     };
 
-    const handleScroll = (e: Event) => {
-      const target = e.target as HTMLElement;
-      collector.recordMouseMovement(target.scrollLeft, target.scrollTop, 'scroll');
+    const handleMouseUp = (e: MouseEvent) => {
+      const rect = form.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const eventType = e.button === 0 ? 'left_release' : 'right_release';
+      collector.recordMouseMovement(x, y, eventType);
+    };
+
+    const handleWheel = (e: WheelEvent) => {
+      const rect = form.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const eventType = e.deltaY < 0 ? 'scroll_up' : 'scroll_down';
+      collector.recordMouseMovement(x, y, eventType);
     };
 
     const handleTouchStart = (e: TouchEvent) => {
@@ -106,8 +118,9 @@ export const BehavioralForm: React.FC<BehavioralFormProps> = ({
     form.addEventListener('keydown', handleKeyDown);
     form.addEventListener('keyup', handleKeyUp);
     form.addEventListener('mousemove', handleMouseMove);
-    form.addEventListener('click', handleMouseClick);
-    form.addEventListener('scroll', handleScroll);
+    form.addEventListener('mousedown', handleMouseDown);
+    form.addEventListener('mouseup', handleMouseUp);
+    form.addEventListener('wheel', handleWheel);
     form.addEventListener('touchstart', handleTouchStart);
     form.addEventListener('touchmove', handleTouchMove);
     form.addEventListener('touchend', handleTouchEnd);
@@ -116,8 +129,9 @@ export const BehavioralForm: React.FC<BehavioralFormProps> = ({
       form.removeEventListener('keydown', handleKeyDown);
       form.removeEventListener('keyup', handleKeyUp);
       form.removeEventListener('mousemove', handleMouseMove);
-      form.removeEventListener('click', handleMouseClick);
-      form.removeEventListener('scroll', handleScroll);
+      form.removeEventListener('mousedown', handleMouseDown);
+      form.removeEventListener('mouseup', handleMouseUp);
+      form.removeEventListener('wheel', handleWheel);
       form.removeEventListener('touchstart', handleTouchStart);
       form.removeEventListener('touchmove', handleTouchMove);
       form.removeEventListener('touchend', handleTouchEnd);
