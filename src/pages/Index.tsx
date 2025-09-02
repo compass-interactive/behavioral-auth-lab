@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BehavioralCollector, NaiveBayesAuthenticator, BehavioralData } from '@/lib/behavioralAuth';
 import { BehavioralForm } from '@/components/BehavioralForm';
+import { ReferenceCard } from '@/components/ReferenceCard';
 import { TrainingDashboard } from '@/components/TrainingDashboard';
 import { AuthenticationResults } from '@/components/AuthenticationResults';
 import { Button } from '@/components/ui/button';
@@ -241,12 +242,19 @@ const Index = () => {
             />
             
             {isFormVisible && currentSession <= 10 && (
-              <BehavioralForm
-                collector={collector}
-                onSubmit={handleTrainingSubmit}
-                sessionNumber={currentSession}
-                isTraining={true}
-              />
+              <div className="grid lg:grid-cols-3 gap-8 items-start">
+                <div className="lg:order-2">
+                  <ReferenceCard />
+                </div>
+                <div className="lg:col-span-2 lg:order-1">
+                  <BehavioralForm
+                    collector={collector}
+                    onSubmit={handleTrainingSubmit}
+                    sessionNumber={currentSession}
+                    isTraining={true}
+                  />
+                </div>
+              </div>
             )}
           </div>
         )}
@@ -262,11 +270,18 @@ const Index = () => {
             )}
             
             {isFormVisible && (
-              <BehavioralForm
-                collector={collector}
-                onSubmit={handleAuthenticationTest}
-                isTraining={false}
-              />
+              <div className="grid lg:grid-cols-3 gap-8 items-start">
+                <div className="lg:order-2">
+                  <ReferenceCard />
+                </div>
+                <div className="lg:col-span-2 lg:order-1">
+                  <BehavioralForm
+                    collector={collector}
+                    onSubmit={handleAuthenticationTest}
+                    isTraining={false}
+                  />
+                </div>
+              </div>
             )}
           </div>
         )}

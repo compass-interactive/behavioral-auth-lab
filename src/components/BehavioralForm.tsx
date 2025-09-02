@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BehavioralCollector } from '@/lib/behavioralAuth';
 
 interface BehavioralFormProps {
@@ -20,11 +20,11 @@ export const BehavioralForm: React.FC<BehavioralFormProps> = ({
   isTraining = false
 }) => {
   const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    phoneNumber: '',
-    address: '',
-    comments: ''
+    cardholderName: '',
+    cardNumber: '',
+    expiryDate: '',
+    cvc: '',
+    zipCode: ''
   });
 
   const formRef = useRef<HTMLFormElement>(null);
@@ -125,7 +125,31 @@ export const BehavioralForm: React.FC<BehavioralFormProps> = ({
   }, [collector]);
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    let formattedValue = value;
+    
+    // Format card number with spaces
+    if (field === 'cardNumber') {
+      formattedValue = value.replace(/\s/g, '').replace(/(.{4})/g, '$1 ').trim();
+      if (formattedValue.length > 19) formattedValue = formattedValue.slice(0, 19);
+    }
+    
+    // Format expiry date
+    if (field === 'expiryDate') {
+      formattedValue = value.replace(/\D/g, '').replace(/(\d{2})(\d)/, '$1/$2');
+      if (formattedValue.length > 5) formattedValue = formattedValue.slice(0, 5);
+    }
+    
+    // Format CVC (3-4 digits only)
+    if (field === 'cvc') {
+      formattedValue = value.replace(/\D/g, '').slice(0, 4);
+    }
+    
+    // Format ZIP code (5 digits only)
+    if (field === 'zipCode') {
+      formattedValue = value.replace(/\D/g, '').slice(0, 5);
+    }
+    
+    setFormData(prev => ({ ...prev, [field]: formattedValue }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -149,66 +173,73 @@ export const BehavioralForm: React.FC<BehavioralFormProps> = ({
       <CardContent>
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="fullName" className="text-foreground font-medium">Full Name</Label>
+            <Label htmlFor="cardholderName" className="text-foreground font-medium">Cardholder Name</Label>
             <Input
-              id="fullName"
+              id="cardholderName"
               type="text"
-              value={formData.fullName}
-              onChange={(e) => handleInputChange('fullName', e.target.value)}
-              placeholder="Enter your full name"
-              className="bg-input border-border focus:ring-primary transition-all duration-300"
+              value={formData.cardholderName}
+              onChange={(e) => handleInputChange('cardholderName', e.target.value)}
+              placeholder="Alex Johnson"
+              className="bg-input border-border focus:ring-primary transition-all duration-300 font-mono"
               required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email" className="text-foreground font-medium">Email Address</Label>
+            <Label htmlFor="cardNumber" className="text-foreground font-medium">Card Number</Label>
             <Input
-              id="email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => handleInputChange('email', e.target.value)}
-              placeholder="Enter your email address"
-              className="bg-input border-border focus:ring-primary transition-all duration-300"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="phoneNumber" className="text-foreground font-medium">Phone Number</Label>
-            <Input
-              id="phoneNumber"
-              type="tel"
-              value={formData.phoneNumber}
-              onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
-              placeholder="Enter your phone number"
-              className="bg-input border-border focus:ring-primary transition-all duration-300"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="address" className="text-foreground font-medium">Address</Label>
-            <Input
-              id="address"
+              id="cardNumber"
               type="text"
-              value={formData.address}
-              onChange={(e) => handleInputChange('address', e.target.value)}
-              placeholder="Enter your address"
-              className="bg-input border-border focus:ring-primary transition-all duration-300"
+              value={formData.cardNumber}
+              onChange={(e) => handleInputChange('cardNumber', e.target.value)}
+              placeholder="4532 1508 2457 9123"
+              className="bg-input border-border focus:ring-primary transition-all duration-300 font-mono text-lg tracking-wider"
+              maxLength={19}
               required
             />
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="expiryDate" className="text-foreground font-medium">Expiry Date</Label>
+              <Input
+                id="expiryDate"
+                type="text"
+                value={formData.expiryDate}
+                onChange={(e) => handleInputChange('expiryDate', e.target.value)}
+                placeholder="12/28"
+                className="bg-input border-border focus:ring-primary transition-all duration-300 font-mono"
+                maxLength={5}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="cvc" className="text-foreground font-medium">CVC</Label>
+              <Input
+                id="cvc"
+                type="text"
+                value={formData.cvc}
+                onChange={(e) => handleInputChange('cvc', e.target.value)}
+                placeholder="456"
+                className="bg-input border-border focus:ring-primary transition-all duration-300 font-mono"
+                maxLength={4}
+                required
+              />
+            </div>
+          </div>
+
           <div className="space-y-2">
-            <Label htmlFor="comments" className="text-foreground font-medium">Additional Comments</Label>
-            <Textarea
-              id="comments"
-              value={formData.comments}
-              onChange={(e) => handleInputChange('comments', e.target.value)}
-              placeholder="Enter any additional comments or feedback..."
-              className="bg-input border-border focus:ring-primary transition-all duration-300 min-h-[100px]"
-              rows={4}
+            <Label htmlFor="zipCode" className="text-foreground font-medium">ZIP Code</Label>
+            <Input
+              id="zipCode"
+              type="text"
+              value={formData.zipCode}
+              onChange={(e) => handleInputChange('zipCode', e.target.value)}
+              placeholder="12345"
+              className="bg-input border-border focus:ring-primary transition-all duration-300 font-mono"
+              maxLength={5}
+              required
             />
           </div>
 
