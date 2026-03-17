@@ -1,3 +1,4 @@
+CYPHER – Behavioral Biometrics Authentication Engine
 This code implements a **Behavioral Biometrics Engine**. Instead of checking *what* you know (like a password), it checks *how* you behave (typing rhythm, mouse speed, touch pressure).
 
 The architecture is a client-side **machine learning pipeline** consisting of three distinct layers: **Data Collection**, **Feature Extraction**, and **Probabilistic Inference (The Brain)**.
